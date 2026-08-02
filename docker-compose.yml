@@ -1,0 +1,15 @@
+services:
+  solomon:
+    build:
+      context: .
+      dockerfile: deploy/Dockerfile
+    image: solomon:latest
+    container_name: solomon
+    ports:
+      - '3000:3000'
+    volumes:
+      - solomon-data:/app/data
+    restart: unless-stopped
+
+volumes:
+  solomon-data:

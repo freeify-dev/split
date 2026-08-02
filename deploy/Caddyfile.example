@@ -1,0 +1,8 @@
+# Reverse proxy with automatic HTTPS. Point your DNS at the server, then:
+#   sudo cp deploy/Caddyfile.example /etc/caddy/Caddyfile   (edit the domain)
+# NOTE: group links are secret capabilities — your proxy access logs will
+# contain them. Restrict who can read those logs.
+
+split.example.com {
+	reverse_proxy 127.0.0.1:3000
+}

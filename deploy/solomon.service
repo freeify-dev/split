@@ -1,0 +1,29 @@
+# Bare-metal alternative to Docker.
+#   sudo cp deploy/solomon.service /etc/systemd/system/
+#   sudo systemctl daemon-reload && sudo systemctl enable --now solomon
+# Assumes the repo is built at /opt/solomon and node is on a stable path
+# (nvm users: ln -s "$(which node)" /usr/local/bin/node after nvm install).
+
+[Unit]
+Description=Solomon bill splitter
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=solomon
+WorkingDirectory=/opt/solomon
+ExecStart=/usr/local/bin/node server/dist/index.js
+Environment=NODE_ENV=production
+Environment=PORT=3000
+Environment=HOST=127.0.0.1
+Environment=DATA_DIR=/opt/solomon/data
+Restart=on-failure
+RestartSec=3
+# hardening (optional but free)
+NoNewPrivileges=true
+ProtectSystem=full
+ReadWritePaths=/opt/solomon/data
+
+[Install]
+WantedBy=multi-user.target

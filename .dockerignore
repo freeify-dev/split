@@ -1,0 +1,8 @@
+**/node_modules
+**/data
+**/dist
+release
+.git
+.claude
+*.log
+dev-dist

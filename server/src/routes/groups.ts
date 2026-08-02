@@ -109,6 +109,22 @@ groupRoutes.patch('/:gid', validate('json', groupPatchSchema), (c) => {
 groupRoutes.delete('/:gid', (c) => {
   const db = c.get('db')
   const group = getGroupOr404(db, c.req.param('gid'))
-  db.delete(groups).where(eq(groups.id, group.id)).run() // cascades participants/expenses/activity
+
+  // Order matters, and a single `delete from groups` does NOT work.
+  //
+  // Deleting a group cascades to both participants and expenses. But
+  // expense_payers and expense_splits reference participants with ON DELETE
+  // RESTRICT, and SQLite enforces that restriction before the expense cascade
+  // has removed the referencing rows — so the whole statement fails with
+  // "FOREIGN KEY constraint failed" for any group that has an expense.
+  //
+  // The RESTRICT is right and should stay: deleting a single participant who
+  // appears in an expense would silently corrupt the ledger. So clear the
+  // expenses first (which cascades payers and splits), leaving the group delete
+  // to cascade only participants and activity.
+  db.transaction((tx) => {
+    tx.delete(expenses).where(eq(expenses.groupId, group.id)).run()
+    tx.delete(groups).where(eq(groups.id, group.id)).run()
+  })
   return c.body(null, 204)
 })

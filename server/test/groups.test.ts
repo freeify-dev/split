@@ -63,6 +63,35 @@ describe('groups API', () => {
     expect(del.status).toBe(204)
     expect((await t.request(`/api/groups/${group.id}`)).status).toBe(404)
   })
+
+  // Regression: deleting a group that has expenses used to fail with
+  // "FOREIGN KEY constraint failed". expense_payers and expense_splits
+  // reference participants with ON DELETE RESTRICT, and SQLite enforced that
+  // before the expense cascade had cleared the referencing rows — so a group
+  // became undeletable the moment anyone added an expense to it. The test above
+  // never caught it because the group it deletes is empty.
+  it('deletes a group that has expenses', async () => {
+    const group = await t.createGroup()
+    const [ana, ben] = group.participants
+    const expense = await t.request(`/api/groups/${group.id}/expenses`, {
+      method: 'POST',
+      actor: ana!.id,
+      json: {
+        description: 'Dinner',
+        amount: 3000,
+        currency: 'EUR',
+        date: '2026-07-20',
+        splitMode: 'equal',
+        paidBy: ana!.id,
+        splits: [{ participantId: ana!.id }, { participantId: ben!.id }],
+      },
+    })
+    expect(expense.status).toBe(201)
+
+    const del = await t.request(`/api/groups/${group.id}`, { method: 'DELETE' })
+    expect(del.status).toBe(204)
+    expect((await t.request(`/api/groups/${group.id}`)).status).toBe(404)
+  })
 })
 
 describe('participants API', () => {
